@@ -1,32 +1,85 @@
+
 import streamlit as st
 from pathlib import Path
 from config import APP_NAME, APP_TAGLINE, DEFAULT_SOP_PATH, ensure_directories, get_settings
 from document_manager import list_pdf_documents, save_uploaded_pdf, remove_document
 from rag_engine import ColdChainRAG, ConfigurationError, RAGError
 
-st.set_page_config(page_title="ColdChain AI", page_icon="🧊", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="ColdChain AI", page_icon="❄️", layout="wide", initial_sidebar_state="expanded")
 ensure_directories()
 settings = get_settings()
 
 st.markdown("""
 <style>
-:root { --forest:#071A14; --emerald:#2E8B68; --sage:#8FBF9F; --purple:#B7A6D9; --ice:#A9D9E8; --warm:#F3F8F4; }
-.stApp { background: linear-gradient(145deg, #f5f8f5 0%, #edf5f0 55%, #f6f3fa 100%); color:#14231b; }
-[data-testid="stSidebar"] { background: linear-gradient(180deg,#071A14 0%,#10382a 100%); }
-[data-testid="stSidebar"] * { color:#F3F8F4 !important; }
-[data-testid="stSidebar"] [data-testid="stRadio"] label { padding: .42rem .55rem; border-radius: .65rem; }
-.block-container { padding-top: 1.7rem; max-width: 1440px; }
-.hero { background: linear-gradient(120deg,#071A14 0%,#14553e 70%,#2E8B68 100%); color:#F3F8F4; border-radius:22px; padding:2rem 2.2rem; margin-bottom:1.1rem; }
-.hero h1 { color:#F3F8F4; font-size:2.25rem; margin-bottom:.35rem; }
-.hero p { color:#dcece2; font-size:1.05rem; }
-.eyebrow { text-transform:uppercase; letter-spacing:.12em; font-size:.72rem; font-weight:700; color:#8FBF9F; }
-.panel { background:rgba(255,255,255,.84); border:1px solid #dce8df; border-radius:16px; padding:1rem 1.15rem; margin:.25rem 0 .8rem; box-shadow:0 5px 20px rgba(7,26,20,.035); }
-.panel h3 { margin-top:.1rem; }
-.pill { display:inline-block; border-radius:99px; padding:.24rem .65rem; background:#e1f1e8; color:#216b4a; font-size:.78rem; font-weight:700; }
-.small-muted { color:#607367; font-size:.88rem; }
-div.stButton > button { border-radius:10px; border:1px solid #cbded1; font-weight:650; }
-div.stButton > button[kind="primary"] { background:#2E8B68; border-color:#2E8B68; }
-[data-testid="stMetric"] { background:rgba(255,255,255,.8); border:1px solid #dce8df; padding:1rem; border-radius:14px; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+:root {
+  --forest:#142B4D; --forest2:#203C66; --emerald:#4F73D8; --sage:#9DB8F4;
+  --warm:#F5F8FC; --ink:#1F3557; --muted:#71839C; --line:#DFE7F1;
+}
+html, body, button, input, textarea, label,
+[data-testid="stMarkdownContainer"], [data-testid="stCaptionContainer"],
+[data-testid="stMetricLabel"], [data-testid="stMetricValue"] {
+  font-family:'Inter',sans-serif !important;
+}
+/* Keep Streamlit's icon font intact: otherwise icon ligatures render as words like 'upload'. */
+.material-icons, .material-symbols-rounded, .material-symbols-outlined,
+[data-testid="stIconMaterial"], [data-testid="stFileUploader"] span.material-symbols-rounded {
+  font-family:'Material Symbols Rounded','Material Icons',sans-serif !important;
+  font-weight:normal !important;
+  font-style:normal !important;
+  letter-spacing:normal !important;
+  text-transform:none !important;
+  white-space:nowrap !important;
+  word-wrap:normal !important;
+  direction:ltr !important;
+  -webkit-font-feature-settings:'liga' !important;
+  -webkit-font-smoothing:antialiased;
+}
+.stApp { background:linear-gradient(135deg,#F8FAFE 0%,#EEF3FB 65%,#F4F6FC 100%); color:var(--ink); }
+.block-container { max-width:1320px; padding-top:1.25rem; padding-bottom:2.5rem; }
+
+.brand-lockup { display:flex; align-items:center; gap:12px; padding:8px 0 12px; }
+.brand-mark { width:48px; height:48px; flex:0 0 48px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(145,190,255,.07)); border:1px solid rgba(202,229,255,.28); box-shadow:0 8px 20px rgba(5,18,43,.16), inset 0 1px 0 rgba(255,255,255,.14); }
+.brand-mark svg { width:38px; height:38px; display:block; }
+.brand-copy { min-width:0; }
+.brand-name { color:#F7FAFF; font-size:1.32rem; line-height:1.1; letter-spacing:-.055em; font-weight:800; white-space:nowrap; }
+.brand-name span { color:#9EC8FF; margin-left:3px; font-weight:700; }
+.brand-tagline { margin-top:6px; color:#BFD0EA; font-size:.57rem; font-weight:700; letter-spacing:.13em; white-space:nowrap; }
+
+[data-testid="stSidebar"] { background:linear-gradient(180deg,var(--forest) 0%,var(--forest2) 100%); }
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color:#F8FAFF; }
+[data-testid="stSidebar"] h2 { color:#F8FAFF !important; font-size:1.28rem !important; letter-spacing:-.025em; }
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] { color:#D5E1F4 !important; }
+[data-testid="stSidebar"] hr { border-color:rgba(213,225,244,.18); }
+[data-testid="stSidebar"] div.stButton > button { min-height:42px; border-radius:11px; color:#F8FAFF !important; background:rgba(255,255,255,.045) !important; border:1px solid rgba(157,184,244,.24) !important; text-align:left !important; justify-content:flex-start !important; padding:.55rem .85rem; transition:background .15s ease,border-color .15s ease; }
+[data-testid="stSidebar"] div.stButton > button:hover { background:rgba(79,115,216,.28) !important; border-color:#9DB8F4 !important; }
+[data-testid="stSidebar"] div.stButton > button[kind="primary"] { background:#4F73D8 !important; border-color:#4F73D8 !important; color:#fff !important; }
+.hero { background:linear-gradient(115deg,#142B4D 0%,#203C66 62%,#4F73D8 100%); color:#F8FAFF; border-radius:20px; padding:1.6rem 1.85rem; margin:0 0 1.1rem; box-shadow:0 8px 24px rgba(31,53,87,.08); overflow-wrap:anywhere; }
+.hero h1 { color:#F8FAFF !important; font-size:clamp(1.65rem,2.8vw,2.3rem); line-height:1.18; letter-spacing:-.04em; margin:.5rem 0 .6rem; }
+.hero p { color:#E0E9F8 !important; font-size:1rem; line-height:1.55; margin-bottom:0; }
+.eyebrow { text-transform:uppercase; letter-spacing:.12em; font-size:.7rem; line-height:1.4; font-weight:800; color:#AFC4F5; }
+.panel { background:rgba(255,255,255,.91); border:1px solid var(--line); border-radius:15px; padding:1rem 1.1rem; margin:.15rem 0 .65rem; box-shadow:0 4px 16px rgba(31,53,87,.045); }
+.panel h3 { margin:.35rem 0 .45rem; font-size:1.12rem; line-height:1.3; letter-spacing:-.02em; }
+.small-muted { color:var(--muted); font-size:.9rem; line-height:1.55; }
+.pill { display:inline-block; border-radius:99px; padding:.24rem .65rem; background:#EAF0FF; color:#3156B5; font-size:.78rem; font-weight:700; }
+div.stButton > button { min-height:42px; border-radius:10px; border:1px solid #D5DFEF; font-weight:600; white-space:normal; line-height:1.35; transition:all .15s ease; }
+div.stButton > button:hover { border-color:#9DB8F4; color:#203C66; }
+div.stButton > button[kind="primary"] { background:#4F73D8; border-color:#4F73D8; color:#fff; }
+[data-testid="stMetric"] { background:rgba(255,255,255,.9); border:1px solid var(--line); padding:.8rem .95rem; border-radius:14px; box-shadow:0 3px 12px rgba(31,53,87,.035); }
+[data-testid="stMetricLabel"] { color:#71839C; font-size:.86rem; }
+[data-testid="stMetricValue"] { color:#1F3557; font-size:1.8rem; }
+[data-testid="stChatMessage"] { border:1px solid #E0E7EF; border-radius:14px; padding:.85rem 1rem; }
+h2, h3 { letter-spacing:-.025em; }
+hr { border-color:#DFE7F1; }
+/* PDF uploader: keep the native control readable and avoid button-label collisions */
+[data-testid="stFileUploader"] { background:rgba(255,255,255,.72); border:1px solid #DFE7F1; border-radius:14px; padding:12px 14px; }
+[data-testid="stFileUploader"] section { background:#F7F9FE; border:1px dashed #A9BDEB; border-radius:11px; padding:12px; }
+[data-testid="stFileUploader"] section > div { gap:.6rem; }
+[data-testid="stFileUploader"] button { min-height:38px !important; border-radius:9px !important; background:#ffffff !important; color:#203C66 !important; border:1px solid #D5DFEF !important; padding:.45rem .8rem !important; white-space:nowrap !important; }
+[data-testid="stFileUploader"] button p { color:#203C66 !important; margin:0 !important; white-space:nowrap !important; }
+[data-testid="stFileUploader"] small { color:#71839C !important; }
+[data-testid="stFileUploader"] [data-testid="stMarkdownContainer"] p { color:#71839C; }
+@media (max-width: 900px) { .hero { padding:1.25rem; } .block-container { padding-top:.9rem; } }
 </style>
 """, unsafe_allow_html=True)
 
@@ -42,24 +95,109 @@ if "pending_question" not in st.session_state:
     st.session_state.pending_question = ""
 
 engine: ColdChainRAG = st.session_state.rag_engine
-pages = ["Dashboard", "Ask AI", "SOP Knowledge Base", "Cold Storage Workflow", "RAG Trace", "Responsible AI", "Settings"]
+# Sidebar navigation grouped into sections
+NAV_GROUPS = {
+    "MAIN WORKSPACE": [
+        "Dashboard",
+        "Ask AI",
+        "SOP Knowledge Base",
+    ],
+    "WORKFLOW & TRUST": [
+        "Cold Storage Workflow",
+        "Responsible AI",
+    ],
+    "DEVELOPER TOOLS": [
+        "RAG Trace",
+        "Settings",
+    ],
+}
+
+pages = [page for group in NAV_GROUPS.values() for page in group]
 
 with st.sidebar:
-    st.markdown("## 🧊 ColdChain AI")
-    st.caption("Understand your cold chain. Smarter.")
+    # Refined brand lockup: ice-cube mark + carefully spaced wordmark.
+    st.markdown("""
+    <div class="brand-lockup">
+        <div class="brand-mark" aria-label="ColdChain AI ice cube logo">
+            <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
+                <defs>
+                    <linearGradient id="iceFront" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#DDF5FF"/>
+                        <stop offset="100%" stop-color="#79B9F5"/>
+                    </linearGradient>
+                    <linearGradient id="iceSide" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#8CCBFF"/>
+                        <stop offset="100%" stop-color="#4D83D7"/>
+                    </linearGradient>
+                </defs>
+                <path d="M32 5 54 17.5 32 30 10 17.5Z" fill="#F2FBFF" stroke="#C6E8FF" stroke-width="1.5"/>
+                <path d="M10 17.5 32 30 32 56 10 43.5Z" fill="url(#iceFront)" stroke="#C6E8FF" stroke-width="1.5"/>
+                <path d="M54 17.5 32 30 32 56 54 43.5Z" fill="url(#iceSide)" stroke="#A5D7FF" stroke-width="1.5"/>
+                <path d="M32 5 32 30" stroke="#D5F0FF" stroke-width="1.4" opacity=".9"/>
+                <path d="M17 21.5 27 27" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity=".9"/>
+                <path d="M38 34 47 29" stroke="#EAF8FF" stroke-width="2" stroke-linecap="round" opacity=".8"/>
+                <path d="M17 37 25 41.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity=".65"/>
+            </svg>
+        </div>
+        <div class="brand-copy">
+            <div class="brand-name">ColdChain<span>AI</span></div>
+            <div class="brand-tagline">COLD STORAGE INTELLIGENCE</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     st.divider()
-    page = st.radio("Navigate", pages, label_visibility="collapsed")
+
+    # Preserve the currently selected page across reruns
+    if "selected_page" not in st.session_state:
+        st.session_state.selected_page = "Dashboard"
+
+    for group_name, group_pages in NAV_GROUPS.items():
+        st.markdown(
+            f"""
+            <div style="
+                font-size: 0.72rem;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                color: #AFC4F5;
+                margin-top: 1.1rem;
+                margin-bottom: 0.4rem;
+            ">
+                {group_name}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        for item in group_pages:
+            if st.button(
+                item,
+                key=f"nav_{item}",
+                use_container_width=True,
+                type=(
+                    "primary"
+                    if st.session_state.selected_page == item
+                    else "secondary"
+                ),
+            ):
+                st.session_state.selected_page = item
+                st.rerun()
+
+    page = st.session_state.selected_page
+
     st.divider()
     st.markdown("**System overview**")
     st.caption(f"RAG: {'Ready' if engine.is_ready else 'Not initialized'}")
     st.caption(f"Documents: {len(engine.documents)}")
+
     if settings.get("provider") == "ollama":
-        st.success("Local AI model connected")
-    elif not settings.get("google_api_key"):
-        st.warning("API key not configured")
+        st.caption("Provider: Ollama")
+    elif settings.get("google_api_key"):
+        st.caption("Provider: Gemini • Credentials configured")
+    else:
+        st.caption("Provider credentials missing")
+
     st.markdown("---")
     st.caption("Informational use only • No equipment control")
-
 def hero(title, subtitle, eyebrow="COLDCHAIN INTELLIGENCE"):
     st.markdown(f'<div class="hero"><div class="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{subtitle}</p></div>', unsafe_allow_html=True)
 
@@ -82,17 +220,12 @@ if page == "Dashboard":
     with c1:
         if st.button("✨ Ask ColdChain AI", type="primary", use_container_width=True):
             st.session_state.pending_question = ""
-            st.session_state["nav_target"] = "Ask AI"
+            st.session_state.selected_page = "Ask AI"
             st.rerun()
     with c2:
         if st.button("↗ Explore workflow", use_container_width=True):
-            st.session_state["nav_target"] = "Cold Storage Workflow"
+            st.session_state.selected_page = "Cold Storage Workflow"
             st.rerun()
-    # Keep radio state simple; the navigation target is reflected in a quick action below.
-    if st.session_state.get("nav_target"):
-        st.info(f"Choose **{st.session_state.nav_target}** in the sidebar to continue.")
-        st.session_state.nav_target = None
-
     stats = engine.stats()
     cols = st.columns(4)
     metrics = [
@@ -105,15 +238,17 @@ if page == "Dashboard":
         with col:
             st.metric(label, value, help=helptext)
     st.subheader("How ColdChain AI works")
-    steps = st.columns(4)
-    for col, (num, title, desc) in zip(steps, [
+    process_steps = [
         ("01", "SOP document", "Load approved PDF guidance."),
         ("02", "Retrieve", "Find relevant passages with embeddings."),
-        ("03", "Generate", "Gemini explains only from retrieved context."),
-        ("04", "Verify", "Review source document and page references."),
-    ]):
-        with col:
-            st.markdown(f'<div class="panel"><div class="eyebrow">{num}</div><h3>{title}</h3><div class="small-muted">{desc}</div></div>', unsafe_allow_html=True)
+        ("03", "Generate", "The configured language model explains retrieved evidence."),
+        ("04", "Verify", "Review source documents and page references."),
+    ]
+    for idx in range(0, len(process_steps), 2):
+        step_cols = st.columns(2, gap="medium")
+        for col, (num, title, desc) in zip(step_cols, process_steps[idx:idx + 2]):
+            with col:
+                st.markdown(f'<div class="panel"><div class="eyebrow">STEP {num}</div><h3>{title}</h3><div class="small-muted">{desc}</div></div>', unsafe_allow_html=True)
     st.subheader("Try asking")
     qs = ["Why is temperature monitoring important?", "Explain the cold-storage workflow.", "What does the SOP say about receiving?", "What handling rules are documented for perishables?"]
     qcols = st.columns(2)
@@ -121,14 +256,18 @@ if page == "Dashboard":
         with qcols[i % 2]:
             if st.button(q, key=f"sample_{i}", use_container_width=True):
                 st.session_state.pending_question = q
-                st.session_state["nav_target"] = "Ask AI"
-                st.info("Choose **Ask AI** in the sidebar. Your question is ready.")
+                st.session_state.selected_page = "Ask AI"
+                st.rerun()
     st.info("Only indexed SOP content can support grounded answers. A missing source is not proof that a procedure does not exist.")
 
 elif page == "Ask AI":
     hero("Ask ColdChain AI", "Ask questions about your uploaded cold-storage SOPs and inspect the evidence behind each answer.", "GROUNDED ANSWERS")
     if not engine.is_ready:
-        st.warning("Your knowledge base is not ready yet. Add a PDF and configure GOOGLE_API_KEY in Settings or your .env file.")
+        provider = str(settings.get("provider", "ollama")).lower()
+        if provider == "ollama":
+            st.warning("Your knowledge base is not ready yet. Check that Ollama is running, the configured models are available, and a PDF has been indexed.")
+        else:
+            st.warning("Your knowledge base is not ready yet. Check the hosted model credentials and index at least one SOP PDF.")
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"], avatar="🧊" if msg["role"] == "assistant" else "👤"):
             st.markdown(msg["content"])
@@ -184,8 +323,13 @@ elif page == "Ask AI":
 
 elif page == "SOP Knowledge Base":
     hero("SOP Knowledge Base", "Upload, index, inspect, and manage the documents that ground ColdChain AI.", "DOCUMENT MANAGEMENT")
-    st.markdown('<div class="panel"><b>Supported format:</b> PDF. Documents are processed into text chunks and embeddings before they can be used for answers.</div>', unsafe_allow_html=True)
-    upload = st.file_uploader("Upload SOP PDF", type=["pdf"], accept_multiple_files=True)
+    st.markdown('<div class="panel"><b>Supported format: PDF</b><div class="small-muted">Documents are processed into searchable text chunks and embeddings before they can support answers.</div></div>', unsafe_allow_html=True)
+    upload = st.file_uploader(
+        "Choose SOP documents",
+        type=["pdf"],
+        accept_multiple_files=True,
+        help="Upload one or more PDF documents containing your approved SOPs."
+    )
     if upload and st.button("Upload and index selected PDFs", type="primary"):
         with st.spinner("Validating documents, extracting text, and creating embeddings…"):
             try:
@@ -250,7 +394,8 @@ elif page == "Cold Storage Workflow":
                 st.markdown(f'<div class="panel"><div style="font-size:1.7rem">{emoji}</div><h3>{title}</h3><div class="small-muted">{desc}</div></div>', unsafe_allow_html=True)
                 if st.button(f"Ask about {title}", key=f"workflow_{title}", use_container_width=True):
                     st.session_state.pending_question = f"What does the uploaded SOP say about {title.lower()}?"
-                    st.info("Choose **Ask AI** in the sidebar to submit this question.")
+                    st.session_state.selected_page = "Ask AI"
+                    st.rerun()
 
 elif page == "RAG Trace":
     hero("RAG Trace", "Inspect the actual evidence retrieval behind your latest answer.", "TRANSPARENT AI")
@@ -332,3 +477,4 @@ elif page == "Settings":
         st.success("Session history cleared.")
     st.subheader("System boundaries")
     st.caption("ColdChain AI is informational only. It does not operate warehouse equipment or make operational decisions.")
+
